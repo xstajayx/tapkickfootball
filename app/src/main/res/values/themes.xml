@@ -1,0 +1,11 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.TapKickFootball" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#0B1B2B</item>
+        <item name="colorPrimaryVariant">#071224</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#38BDF8</item>
+        <item name="colorSecondaryVariant">#0EA5E9</item>
+        <item name="colorOnSecondary">#002133</item>
+        <item name="android:statusBarColor" tools:targetApi="l">#071224</item>
+    </style>
+</resources>
