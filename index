@@ -1,0 +1,2354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#071224" />
+<title>Tap Kick Football</title>
+<style>
+  :root{
+    --txt: rgba(255,255,255,.94);
+    --muted: rgba(255,255,255,.72);
+    --bannerH: 72px;
+
+    --g-green: linear-gradient(180deg, rgba(34,197,94,.98), rgba(22,163,74,.92));
+    --g-blue: linear-gradient(180deg, rgba(56,189,248,.98), rgba(2,132,199,.92));
+    --g-yellow: linear-gradient(180deg, rgba(251,191,36,.98), rgba(245,158,11,.92));
+    --g-red: linear-gradient(180deg, rgba(251,113,133,.98), rgba(225,29,72,.92));
+    --g-purple: linear-gradient(180deg, rgba(167,139,250,.98), rgba(124,58,237,.92));
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; height:100%;
+    overflow:hidden;
+    width:100%;
+    max-width:100%;
+    background:#061019;
+    color:var(--txt);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    user-select:none; -webkit-user-select:none;
+    touch-action:none;
+  }
+
+  #app{ position:relative; width:100%; height:100%; overflow:hidden; }
+  canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+  /* ---------- TOP HUD ---------- */
+  .scorebar{
+    position:absolute;
+    left: env(safe-area-inset-left);
+    right: env(safe-area-inset-right);
+    top: env(safe-area-inset-top);
+    padding: 8px 10px;
+    z-index: 7;
+    pointer-events:none;
+  }
+  .scorebar .bar{
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    background: rgba(0,0,0,.32);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius: 16px;
+    padding: 8px 10px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 14px 40px rgba(0,0,0,.46);
+    display:flex;
+    gap: 8px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    overflow:hidden;
+  }
+  .cells{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; min-width:0; overflow:hidden; }
+  .cell{
+    display:grid; gap:1px;
+    min-width: 70px;
+    padding: 5px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.05);
+  }
+  .cell .k{ font-size:9px; color: var(--muted); letter-spacing:.14em; text-transform:uppercase; }
+  .cell .v{ font-size:14px; font-weight: 1000; line-height:1.05; }
+  .pill{
+    min-width: 180px;
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.05);
+    color: rgba(255,255,255,.78);
+    font-size: 11px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-align:center;
+  }
+
+  /* ---------- EVENT INDICATOR ---------- */
+  .indicator{
+    position:absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: calc(env(safe-area-inset-top) + 68px);
+    padding: 9px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(0,0,0,.38);
+    backdrop-filter: blur(10px);
+    color: rgba(255,255,255,.90);
+    font-size: 11px;
+    letter-spacing:.06em;
+    z-index: 9;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    max-width: calc(100vw - 20px);
+  }
+  .indicator.show{ display:flex; }
+  .indicator .tag{ font-weight:1000; text-transform:uppercase; letter-spacing:.14em; font-size:10px; opacity:.92; }
+  .indicator .meter{
+    width: 92px;
+    height: 8px;
+    border-radius: 999px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.08);
+    display:none;
+  }
+  .indicator .meter .fill{
+    display:block;
+    height:100%;
+    width:100%;
+    background: rgba(56,189,248,.85);
+    transform-origin:left center;
+    transform: scaleX(1);
+  }
+
+  /* ---------- SMALL CONTROLS ---------- */
+  .controlsDock{
+    position:absolute;
+    right: calc(10px + env(safe-area-inset-right));
+    bottom: calc(var(--bannerH) + 10px + env(safe-area-inset-bottom));
+    z-index: 8;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    pointer-events:none;
+  }
+  .controlsDock .row{ display:flex; gap:8px; pointer-events:auto; }
+
+  button{
+    all:unset;
+    cursor:pointer;
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-weight: 1000;
+    letter-spacing: .08em;
+    font-size: 11px;
+    color: rgba(255,255,255,.96);
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 12px 28px rgba(0,0,0,.46);
+    transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+    text-transform: uppercase;
+    text-align:center;
+
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.15;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  button:active{ transform: scale(.98); filter: brightness(.95); box-shadow: 0 10px 22px rgba(0,0,0,.44); }
+  button[disabled]{ opacity:.55; cursor:not-allowed; }
+  .btn-primary{ border-color: rgba(34,197,94,.45); background: var(--g-green); }
+  .btn-blue{ border-color: rgba(56,189,248,.45); background: var(--g-blue); }
+  .btn-warn{ border-color: rgba(251,191,36,.45); background: var(--g-yellow); color: rgba(16,16,18,.92); }
+  .btn-danger{ border-color: rgba(251,113,133,.45); background: var(--g-red); }
+  .btn-purple{ border-color: rgba(167,139,250,.45); background: var(--g-purple); }
+
+  /* Banner (in-game) */
+  #banner-slot{
+    position:absolute;
+    left: env(safe-area-inset-left);
+    right: env(safe-area-inset-right);
+    bottom: env(safe-area-inset-bottom);
+    height: var(--bannerH);
+    display:flex; align-items:center; justify-content:center;
+    padding:10px;
+    background: rgba(0,0,0,.48);
+    border-top: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(10px);
+    z-index: 8;
+  }
+  .banner{
+    width: min(620px, 96vw);
+    height: calc(var(--bannerH) - 20px);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.06);
+    display:flex; align-items:center; justify-content:center;
+    color: rgba(255,255,255,.70);
+    font-size: 11px;
+    letter-spacing:.14em;
+    text-transform: uppercase;
+    text-align:center;
+    padding: 0 10px;
+  }
+
+  /* Overlays */
+  .overlay{
+    position:absolute; inset:0;
+    display:grid; place-items:center;
+    padding: 14px;
+    background: radial-gradient(900px 700px at 50% 25%, rgba(0,0,0,.35), rgba(0,0,0,.88));
+    z-index: 10;
+    overflow:hidden;
+  }
+  .hidden{ display:none; }
+
+  .panel{
+    width: min(780px, calc(100vw - 20px));
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 18px;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.08);
+    backdrop-filter: blur(14px);
+    box-shadow:0 18px 60px rgba(0,0,0,.60);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden; /* ensures right edge stays rounded */
+  }
+  .panel-scroll{
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 6px;
+    padding-bottom: 8px;
+    flex:1;
+    overflow-x:hidden;
+    max-width: 100%;
+  }
+  .panel-actions{
+    position:sticky;
+    bottom:0;
+    margin-top: 10px;
+    padding-top: 10px;
+    padding-bottom: 2px;
+    background: linear-gradient(to top, rgba(10,10,12,.78), rgba(10,10,12,0));
+    backdrop-filter: blur(8px);
+
+    /* fixes “square right edge” look */
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    overflow:hidden;
+  }
+
+  .title{ font-weight: 1000; letter-spacing:.14em; text-transform:uppercase; font-size: 17px; }
+  .sub{ margin-top:8px; color:var(--muted); font-size:13px; line-height:1.45; }
+
+  /* Menu layout */
+  .menuTop{
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    display:grid;
+    gap: 12px;
+    overflow:hidden;
+  }
+  .menuTop .title{
+    text-align:center; /* centered game name */
+    font-size: 20px;
+    letter-spacing: .18em;
+    text-shadow: 0 10px 30px rgba(0,0,0,.7);
+  }
+
+  /* Player card */
+  .playerCard{
+    border-radius: 18px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    padding: 12px;
+    display:flex;
+    gap: 12px;
+    align-items:center;
+    overflow:hidden;
+    max-width:100%;
+  }
+  .playerBadge{
+    width: 76px; height: 96px;
+    border-radius: 16px;
+    border:1px solid rgba(255,255,255,.14);
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    flex: 0 0 auto;
+  }
+  .playerInfo{ min-width:0; flex:1; overflow:hidden; }
+  .playerInfo .name{
+    font-weight:1000;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    font-size: 12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .playerInfo .meta{
+    margin-top:6px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    color: rgba(255,255,255,.78);
+    font-size: 11px;
+    overflow:hidden;
+  }
+  .miniIcon{
+    width: 22px; height: 22px;
+    border-radius: 10px;
+    border:1px solid rgba(255,255,255,.16);
+    background: rgba(0,0,0,.25);
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    flex: 0 0 auto;
+  }
+  .miniIcon svg{ width: 16px; height: 16px; display:block; }
+
+  /* MAIN MENU BUTTONS */
+  .menuButtons{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    overflow:hidden;
+  }
+  .menuButtons button{
+    padding: 14px 16px;
+    font-size: 12px;
+    border-radius: 16px;
+    width:100%;
+    min-width:0;
+  }
+
+  /* Shop tabs */
+  .tabs{
+    display:flex; gap:8px; flex-wrap:wrap;
+    margin-top:12px;
+    max-width: 100%;
+    overflow:hidden;
+  }
+  .tabs button{ flex:1; min-width: 120px; }
+
+  /* Shop rows */
+  .rowItem{
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    border-radius: 18px;
+    padding: 12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap: 10px;
+    cursor:pointer;
+    min-width:0;
+    max-width: 100%;
+    overflow:hidden;
+  }
+  .rowLeft{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    min-width:0;
+    flex:1;
+    overflow:hidden;
+  }
+  .rowIcon{
+    width:34px;height:34px;border-radius:14px;border:1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.10);
+    display:grid; place-items:center;
+    flex: 0 0 auto;
+    overflow:hidden;
+  }
+  .rowIcon svg{ width:20px; height:20px; display:block; }
+  .rowText{ min-width:0; overflow:hidden; max-width: 100%; }
+  .rowText .nm{
+    font-weight:1000; letter-spacing:.06em; text-transform:uppercase; font-size:12px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .rowText .mt{
+    margin-top:4px;
+    font-size:11px;
+    color:rgba(255,255,255,.72);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width: 54vw;
+  }
+  .badge{
+    font-size:11px;
+    padding:7px 10px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.16);
+    background: rgba(0,0,0,.25);
+    white-space:nowrap;
+    flex: 0 0 auto;
+    max-width: 44vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .toast{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    bottom: calc(var(--bannerH) + 16px + env(safe-area-inset-bottom));
+    padding:10px 12px;
+    border-radius:999px;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.14);
+    font-size:12px;
+    color: rgba(255,255,255,.92);
+    opacity:0;
+    transition: opacity 160ms ease, transform 160ms ease;
+    pointer-events:none;
+    z-index:9;
+    white-space:nowrap;
+    max-width: calc(100vw - 20px);
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-6px); }
+
+  /* Menu banner (inside overlay) */
+  .menuBannerWrap{ margin-top: 6px; }
+  .menuBannerWrap .banner{
+    width: 100%;
+    height: 54px;
+  }
+
+  @media (max-width:720px){
+    .rowText .mt{ max-width: 64vw; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+
+  <!-- TOP HUD -->
+  <div class="scorebar">
+    <div class="bar">
+      <div class="cells">
+        <div class="cell"><div class="k">Taps</div><div class="v" id="taps">0</div></div>
+        <div class="cell"><div class="k">Combo</div><div class="v" id="combo">x1</div></div>
+        <div class="cell"><div class="k">RunPts</div><div class="v" id="runPts">0</div></div>
+        <div class="cell"><div class="k">Wallet</div><div class="v" id="wallet">0</div></div>
+        <div class="cell"><div class="k">Best</div><div class="v" id="best">0</div></div>
+      </div>
+      <div class="pill" id="status">Pick a mode. Tap PLAY.</div>
+    </div>
+  </div>
+
+  <!-- EVENT INDICATOR -->
+  <div class="indicator" id="fieldIndicator">
+    <span class="tag" id="fieldTag">EVENT</span>
+    <span id="fieldIndicatorText">—</span>
+    <span class="meter" id="fieldMeter"><span class="fill" id="fieldMeterFill"></span></span>
+  </div>
+
+  <!-- SMALL CONTROLS -->
+  <div class="controlsDock">
+    <div class="row">
+      <button id="btnSound" class="btn-purple">Sound: Off</button>
+      <button id="btnPause">Pause</button>
+    </div>
+    <div class="row">
+      <button id="btnRestart" class="btn-danger">Restart</button>
+      <button id="btnMenuDock" class="btn-blue">Menu</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">+1</div>
+
+  
+  <!-- MENU -->
+  <div class="overlay" id="overlayMenu">
+    <div class="panel">
+      <div class="panel-scroll">
+        <div class="menuTop">
+          <div class="title">TAP KICK FOOTBALL</div>
+          <div class="sub">
+            Tap the ball to keep it up. Score is <b>Taps</b>.
+            RunPts scale with <b>Combo</b> and bank to Wallet on drop.
+          </div>
+
+          <!-- PLAYER CARD -->
+          <div class="playerCard">
+            <div class="playerBadge" id="playerBadge"></div>
+            <div class="playerInfo">
+              <div class="name">PLAYER CARD</div>
+              <div class="meta">
+                <div class="miniIcon" id="iconBoot"></div>
+                <div class="miniIcon" id="iconShirt"></div>
+                <div class="miniIcon" id="iconFlag"></div>
+                <span id="playerMetaText">Kit: Classic • Flag: None</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="modesList" style="display:grid; gap:10px;"></div>
+
+          <div class="menuButtons">
+            <button id="btnPlay" class="btn-primary">PLAY</button>
+            <button id="btnShop" class="btn-blue">SHOP</button>
+            <button id="btnBalls" class="btn-purple">BALLS</button>
+            <button id="btnHow" class="btn-warn">HOW</button>
+<button id="btnMenuSound" class="btn-purple">Sound: Off</button>
+
+          </div>
+
+        
+          <div class="sub" id="modeHint"></div>
+        </div>
+      </div>
+
+      
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div class="overlay hidden" id="overlayShop">
+    <div class="panel">
+      <div class="panel-scroll">
+        <div class="title">SHOP</div>
+        <div class="sub" id="shopSub"></div>
+
+        <div class="tabs">
+          <button id="tabBalls" class="btn-blue">Balls</button>
+          <button id="tabKit" class="btn-warn">Kits</button>
+          <button id="tabPitchShop" class="btn-purple">Pitch</button>
+          <button id="tabBoots" class="btn-primary">Boots</button>
+          <button id="tabFlag" class="btn-danger">Flags</button>
+        </div>
+
+        <div class="sub" id="shopInfo"></div>
+        <div id="shopGrid" style="margin-top:12px; display:grid; gap:10px;"></div>
+      </div>
+      <div class="panel-actions">
+        <button id="btnCloseShop" class="btn-danger" style="width:100%;">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PITCH SELECT -->
+  <div class="overlay hidden" id="overlayPitch">
+    <div class="panel">
+      <div class="panel-scroll">
+        <div class="title">PITCH SELECT</div>
+        <div class="sub">Choose the pitch FX pack you own. Higher tiers = stronger visuals.</div>
+        <div id="pitchGrid" style="margin-top:12px; display:grid; gap:10px;"></div>
+      </div>
+      <div class="panel-actions">
+        <button id="btnClosePitch" class="btn-danger" style="width:100%;">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW -->
+  <div class="overlay hidden" id="overlayHow">
+    <div class="panel">
+      <div class="panel-scroll">
+        <div class="title">HOW TO PLAY</div>
+        <div class="sub" id="howText"></div>
+      </div>
+      <div class="panel-actions">
+        <button id="btnCloseHow" class="btn-danger" style="width:100%;">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="overlayGameOver">
+    <div class="panel">
+      <div class="panel-scroll">
+        <div class="title">DROPPED!</div>
+        <div class="sub" id="gameOverText">Taps: 0</div>
+        <div class="sub" id="top3Text" style="margin-top:10px;"></div>
+      </div>
+      <div class="panel-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="btnRevive" class="btn-blue" style="flex:1;">Revive (Reward)</button>
+        <button id="btnPlayAgain" class="btn-primary" style="flex:1;">Play Again</button>
+        <button id="btnMenu2" class="btn-danger" style="flex:1;">Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const now=()=>performance.now();
+
+  let dpr = 1;
+
+  function viewportSize(){
+    const vv = window.visualViewport;
+    const w = vv ? vv.width : window.innerWidth;
+    const h = vv ? vv.height : window.innerHeight;
+    return { w, h };
+  }
+  function fitCanvas(){
+    const { w, h } = viewportSize();
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width  = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+  }
+  fitCanvas();
+  let needsSoftReset = false;
+  window.addEventListener('resize', () => { fitCanvas(); needsSoftReset = true; });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', () => { fitCanvas(); needsSoftReset = true; });
+  }
+
+  const ui = {
+    taps: document.getElementById('taps'),
+    combo: document.getElementById('combo'),
+    best: document.getElementById('best'),
+    runPts: document.getElementById('runPts'),
+    wallet: document.getElementById('wallet'),
+    status: document.getElementById('status'),
+    toast: document.getElementById('toast'),
+
+    indicator: document.getElementById('fieldIndicator'),
+    fieldTag: document.getElementById('fieldTag'),
+    indicatorText: document.getElementById('fieldIndicatorText'),
+    fieldMeter: document.getElementById('fieldMeter'),
+    fieldMeterFill: document.getElementById('fieldMeterFill'),
+
+    overlayMenu: document.getElementById('overlayMenu'),
+    overlayShop: document.getElementById('overlayShop'),
+    overlayPitch: document.getElementById('overlayPitch'),
+    overlayHow: document.getElementById('overlayHow'),
+    overlayGameOver: document.getElementById('overlayGameOver'),
+
+    btnPlay: document.getElementById('btnPlay'),
+    btnShop: document.getElementById('btnShop'),
+    btnBalls: document.getElementById('btnBalls'),
+    btnHow: document.getElementById('btnHow'),
+
+    btnCloseShop: document.getElementById('btnCloseShop'),
+    btnClosePitch: document.getElementById('btnClosePitch'),
+    btnCloseHow: document.getElementById('btnCloseHow'),
+
+    btnRevive: document.getElementById('btnRevive'),
+    btnPlayAgain: document.getElementById('btnPlayAgain'),
+    btnMenu2: document.getElementById('btnMenu2'),
+
+    gameOverText: document.getElementById('gameOverText'),
+    top3Text: document.getElementById('top3Text'),
+
+    btnSound: document.getElementById('btnSound'),
+    btnMenuSound: document.getElementById('btnMenuSound'),
+    btnPause: document.getElementById('btnPause'),
+    btnRestart: document.getElementById('btnRestart'),
+    btnMenuDock: document.getElementById('btnMenuDock'),
+
+    modeHint: document.getElementById('modeHint'),
+    modesList: document.getElementById('modesList'),
+
+    shopSub: document.getElementById('shopSub'),
+    shopInfo: document.getElementById('shopInfo'),
+    shopGrid: document.getElementById('shopGrid'),
+
+    tabBalls: document.getElementById('tabBalls'),
+    tabKit: document.getElementById('tabKit'),
+    tabPitchShop: document.getElementById('tabPitchShop'),
+    tabBoots: document.getElementById('tabBoots'),
+    tabFlag: document.getElementById('tabFlag'),
+
+    pitchGrid: document.getElementById('pitchGrid'),
+
+    playerBadge: document.getElementById('playerBadge'),
+    iconBoot: document.getElementById('iconBoot'),
+    iconShirt: document.getElementById('iconShirt'),
+    iconFlag: document.getElementById('iconFlag'),
+    playerMetaText: document.getElementById('playerMetaText'),
+
+    menuBannerMount: document.getElementById('menuBannerMount'),
+    bannerMount: document.getElementById('bannerMount'),
+  };
+
+  function toast(text){
+    ui.toast.textContent = text;
+    ui.toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>ui.toast.classList.remove('show'), 700);
+  }
+
+  function fieldIndicator(tag, text, ms=1100, meter01=null, color='rgba(56,189,248,.85)'){
+    ui.fieldTag.textContent = tag;
+    ui.indicatorText.textContent = text;
+
+    if(meter01 === null){
+      ui.fieldMeter.style.display = 'none';
+    } else {
+      ui.fieldMeter.style.display = 'inline-block';
+      ui.fieldMeterFill.style.background = color;
+      ui.fieldMeterFill.style.transform = `scaleX(${clamp(meter01,0,1)})`;
+    }
+
+    ui.indicator.classList.add('show');
+    clearTimeout(fieldIndicator._t);
+    fieldIndicator._t = setTimeout(()=>ui.indicator.classList.remove('show'), ms);
+  }
+
+  // ---------- Audio ----------
+  let soundOn = false;
+  let audioCtx = null;
+  function setSound(on){
+    soundOn = on;
+    ui.btnSound.textContent = `Sound: ${soundOn ? 'On' : 'Off'}`;
+    ui.btnMenuSound.textContent = `Sound: ${soundOn ? 'On' : 'Off'}`;
+    if(soundOn){
+      try{ audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); }catch(_){}
+    }
+  }
+  function beep(freq=440, dur=0.05, vol=0.08, type='sine'){
+    if(!soundOn) return;
+    try{
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type=type; o.frequency.value=freq;
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + dur);
+    }catch(_){}
+  }
+  function crowdBurst(kind='milestone'){
+    if(!soundOn) return;
+    const seq = (kind==='big')
+      ? [[160,0.10,0.10,'sawtooth'],[520,0.05,0.06,'triangle'],[780,0.05,0.06,'triangle']]
+      : (kind==='pickup')
+      ? [[520,0.05,0.07,'triangle'],[660,0.05,0.06,'triangle']]
+      : [[420,0.04,0.07,'square'],[520,0.04,0.06,'square'],[460,0.05,0.05,'square']];
+
+    let delay = 0;
+    for(const [f,d,v,t] of seq){
+      setTimeout(()=>beep(f,d,v,t), delay);
+      delay += Math.max(45, d*1000*0.9);
+    }
+  }
+
+  // ---------- storage ----------
+  const STORE = {
+    wallet: 'keepy_wallet_v26',
+    owned: 'keepy_owned_v26',
+    equipBall: 'keepy_ball_v26',
+    equipKit: 'keepy_kit_v26',
+    equipPitch: 'keepy_pitch_v26',
+    equipFlag: 'keepy_flag_v26',
+    equipBoot: 'keepy_boot_v26',
+    mode: 'keepy_mode_v26',
+    bestByMode: (m)=>`keepy_best_${m}_v26`,
+    top3ByMode: (m)=>`keepy_top3_${m}_v26`,
+  };
+
+  let wallet = Number(localStorage.getItem(STORE.wallet) || 0);
+
+  function loadOwned(){
+    const raw = localStorage.getItem(STORE.owned);
+    const base = { ball:{ football:true }, kit:{ classic:true }, pitch:{ default:true }, flag:{ none:true }, boot:{ black:true } };
+    if(!raw) return base;
+    try{
+      const o = JSON.parse(raw) || {};
+      o.ball ||= {}; o.kit ||= {}; o.pitch ||= {}; o.flag ||= {}; o.boot ||= {};
+      o.ball.football = true; o.kit.classic = true; o.pitch.default = true; o.flag.none = true; o.boot.black = true;
+      return o;
+    }catch{ return base; }
+  }
+  let owned = loadOwned();
+  function saveOwned(){ localStorage.setItem(STORE.owned, JSON.stringify(owned)); }
+
+  // ---------- content ----------
+  const MODES = [
+    { id:'sunday', name:'Sunday League', mult:1.0, pitchBase:'mud',     sides:'walls',  moving:false, vanish:false, hint:'Solid walls. Muddy pitch. x1', unlock:null },
+    { id:'semi',   name:'Semi-Pro',      mult:1.5, pitchBase:'flood',   sides:'posts',  moving:true,  vanish:false, hint:'Floodlights + moving posts. x1.5', unlock:{ requires:'sunday', best:40 } },
+    { id:'pro',    name:'Pro',           mult:2.0, pitchBase:'stadium', sides:'posts',  moving:true,  vanish:true,  hint:'Posts can vanish. x2', unlock:{ requires:'semi', best:70 } },
+    { id:'goat',   name:'G.O.A.T',       mult:2.5, pitchBase:'neon',    sides:'none',   moving:false, vanish:false, hint:'Neon pitch. No sides. x2.5', unlock:{ requires:'pro', best:120 } },
+  ];
+  const getMode=(id)=>MODES.find(m=>m.id===id)||MODES[0];
+
+  function getBest(modeId){ return Number(localStorage.getItem(STORE.bestByMode(modeId)) || 0); }
+  function setBest(modeId, v){ localStorage.setItem(STORE.bestByMode(modeId), String(v)); }
+  function loadTop3(modeId){
+    try{
+      const raw = localStorage.getItem(STORE.top3ByMode(modeId));
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(n=>Number(n)||0).filter(n=>n>0) : [];
+    }catch{ return []; }
+  }
+  function saveTop3(modeId, arr){ localStorage.setItem(STORE.top3ByMode(modeId), JSON.stringify(arr)); }
+  function updateTop3(modeId, taps){
+    const arr = loadTop3(modeId);
+    arr.push(taps);
+    arr.sort((a,b)=>b-a);
+    saveTop3(modeId, arr.slice(0,3));
+  }
+  function bestOverall(){ return Math.max(...MODES.map(m=>getBest(m.id))); }
+  function modeUnlocked(m){
+    if(!m.unlock) return true;
+    return getBest(m.unlock.requires) >= m.unlock.best;
+  }
+
+  const PITCH_UP = [
+    { id:'default', name:'Default Lines', cost:0,    desc:'Classic white lines', tier:0 },
+    { id:'clean',   name:'Clean Cut',     cost:500,  desc:'Cool cyan lines + stronger stripes', tier:1 },
+    { id:'flares',  name:'Flood Flares',  cost:850,  desc:'Golden lines + flare lighting', tier:2 },
+    { id:'ultra',   name:'Ultra Neon FX', cost:1200, desc:'Vivid neon lines + pulse boost', tier:3 },
+  ];
+
+  const FLAGS = [
+    { id:'none',  name:'None',   cost:0,    colors:null },
+    { id:'red',   name:'Red',    cost:250,  colors:{ a:'#ef4444', b:'#ffffff', c:'#ef4444' } },
+    { id:'blue',  name:'Blue',   cost:250,  colors:{ a:'#2563eb', b:'#ffffff', c:'#2563eb' } },
+    { id:'green', name:'Green',  cost:250,  colors:{ a:'#16a34a', b:'#ffffff', c:'#16a34a' } },
+    { id:'yellow',name:'Yellow', cost:250,  colors:{ a:'#fbbf24', b:'#111827', c:'#fbbf24' } },
+    { id:'cyan',  name:'Cyan',   cost:250,  colors:{ a:'#22d3ee', b:'#0b1020', c:'#22d3ee' } },
+    { id:'purple',name:'Purple', cost:250,  colors:{ a:'#a78bfa', b:'#111827', c:'#a78bfa' } },
+    { id:'orange',name:'Orange', cost:250,  colors:{ a:'#fb923c', b:'#111827', c:'#fb923c' } },
+    { id:'pink',  name:'Pink',   cost:250,  colors:{ a:'#fb7185', b:'#111827', c:'#fb7185' } },
+    { id:'black', name:'Black',  cost:250,  colors:{ a:'#0b0f1a', b:'#ffffff', c:'#0b0f1a' } },
+    { id:'white', name:'White',  cost:250,  colors:{ a:'#ffffff', b:'#111827', c:'#ffffff' } },
+  ];
+
+  const BOOTS = [
+    { id:'black',  name:'Black',  cost:0,   color:'#0f172a' },
+    { id:'white',  name:'White',  cost:250, color:'#f8fafc' },
+    { id:'red',    name:'Red',    cost:250, color:'#ef4444' },
+    { id:'blue',   name:'Blue',   cost:250, color:'#2563eb' },
+    { id:'green',  name:'Green',  cost:250, color:'#16a34a' },
+    { id:'yellow', name:'Yellow', cost:250, color:'#fbbf24' },
+    { id:'cyan',   name:'Cyan',   cost:250, color:'#22d3ee' },
+    { id:'purple', name:'Purple', cost:250, color:'#a78bfa' },
+    { id:'pink',   name:'Pink',   cost:250, color:'#fb7185' },
+    { id:'orange', name:'Orange', cost:250, color:'#fb923c' },
+  ];
+
+  const KITS = [
+    { id:'classic', name:'Classic',    cost:0,   desc:'White shirt + dark trim', colors:{ shirt:'#e8eef7', trim:'#111827' } },
+    { id:'neon',    name:'Neon Glow',  cost:650, desc:'Neon shirt + cyan trim', colors:{ shirt:'#00ffd5', trim:'#062a2f' } },
+    { id:'red',     name:'Striker Red',cost:520, desc:'Red shirt + white trim', colors:{ shirt:'#ef4444', trim:'#ffffff' } },
+    { id:'royal',   name:'Royal Blue', cost:520, desc:'Blue shirt + gold trim', colors:{ shirt:'#2563eb', trim:'#fbbf24' } },
+  ];
+
+  const BALLS = [
+    { id:'football',   name:'Football',   elig:0,   cost:0,    sizeMul:1.00, tapCD:85,  phys:{mass:1.00, airDrag:0.014, liftMul:0.92, bounce:0.52}, type:'football' },
+    { id:'basketball', name:'Basketball', elig:35,  cost:220,  sizeMul:1.02, tapCD:85,  phys:{mass:1.00, airDrag:0.013, liftMul:0.92, bounce:0.54}, type:'basketball' },
+    { id:'golf',       name:'Golf Ball',  elig:55,  cost:260,  sizeMul:0.50, tapCD:78,  phys:{mass:0.84, airDrag:0.012, liftMul:0.94, bounce:0.40}, type:'golf' },
+    { id:'cannon',     name:'Cannon Ball',elig:80,  cost:420,  sizeMul:0.72, tapCD:72, phys:{mass:1.25, airDrag:0.002, liftMul:0.70, bounce:0.40}, type:'cannon' },
+    { id:'rugby',      name:'Rugby Ball', elig:110, cost:520,  sizeMul:0.94, tapCD:92,  phys:{mass:1.05, airDrag:0.020, liftMul:0.88, bounce:0.50}, type:'rugby' },
+    { id:'smile',      name:'Smile Ball', elig:140, cost:780,  sizeMul:0.92, tapCD:92,  phys:{mass:0.95, airDrag:0.014, liftMul:0.98, bounce:0.52}, type:'smile' },
+  ];
+  const ballById = (id)=> BALLS.find(b=>b.id===id) || BALLS[0];
+  const kitById = (id)=> KITS.find(k=>k.id===id) || KITS[0];
+  const flagById = (id)=> FLAGS.find(f=>f.id===id) || FLAGS[0];
+  const bootById = (id)=> BOOTS.find(b=>b.id===id) || BOOTS[0];
+
+  // Equipped
+  let selectedModeId = localStorage.getItem(STORE.mode) || 'sunday';
+  if(!MODES.some(m=>m.id===selectedModeId)) selectedModeId='sunday';
+
+  let equippedBall = localStorage.getItem(STORE.equipBall) || 'football';
+  if(!owned.ball[equippedBall]) equippedBall='football';
+
+  let pitchUp = localStorage.getItem(STORE.equipPitch) || 'default';
+  if(!owned.pitch[pitchUp]) pitchUp='default';
+
+  let flagWrap = localStorage.getItem(STORE.equipFlag) || 'none';
+  if(!owned.flag[flagWrap]) flagWrap='none';
+
+  let kitEquip = localStorage.getItem(STORE.equipKit) || 'classic';
+  if(!owned.kit[kitEquip]) kitEquip='classic';
+
+  let bootEquip = localStorage.getItem(STORE.equipBoot) || 'black';
+  if(!owned.boot[bootEquip]) bootEquip='black';
+
+  // ---------- SVG ICONS ----------
+  function svgBoot(color){
+    return `
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 14.2c2.2 1.6 4.5 2.4 7.2 2.4h2.8c2.2 0 4 .8 6 2.4v2H4v-6.8z" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>
+        <path d="M4 14.2c1.5-2.4 2.1-5.4 1.9-8.2h4.6c.2 2.5 1.2 4.6 3.0 6.2l.8.7" fill="${color}" opacity="0.95"/>
+        <path d="M8 20.3h12" stroke="rgba(255,255,255,.28)" stroke-width="1.4"/>
+      </svg>`;
+  }
+  function svgShirt(color, trim){
+    return `
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M8 4l4 2 4-2 4 3-2 4-2-1v12H8V10l-2 1-2-4 4-3z" fill="${color}" opacity="0.92" stroke="rgba(255,255,255,.55)" stroke-width="1.2"/>
+        <path d="M10 6.2h4" stroke="${trim}" stroke-width="2" opacity="0.85"/>
+      </svg>`;
+  }
+  function svgFlag(colors){
+    if(!colors){
+      return `
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M6 3v18" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>
+          <path d="M7 4h10l-2 3 2 3H7V4z" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/>
+        </svg>`;
+    }
+    return `
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M6 3v18" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>
+        <path d="M7 4h10l-2 3 2 3H7V4z" fill="${colors.a}" opacity="0.95"/>
+        <path d="M7 6.7h9.6" stroke="${colors.b}" stroke-width="2.4" opacity="0.95"/>
+        <path d="M7 9.4h9.6" stroke="${colors.c}" stroke-width="2.4" opacity="0.95"/>
+        <path d="M7 4h10l-2 3 2 3H7V4z" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/>
+      </svg>`;
+  }
+
+  function renderPlayerCard(){
+    const kit = kitById(kitEquip);
+    const flag = flagById(flagWrap);
+    const boot = bootById(bootEquip);
+
+    ui.iconBoot.innerHTML = svgBoot(boot.color);
+    ui.iconShirt.innerHTML = svgShirt(kit.colors.shirt, kit.colors.trim);
+    ui.iconFlag.innerHTML = svgFlag(flag.colors);
+
+    ui.playerMetaText.textContent = `Kit: ${kit.name} • Boots: ${boot.name} • Flag: ${flag.name}`;
+
+    ui.playerBadge.innerHTML = `
+      <svg viewBox="0 0 80 100" width="76" height="96">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="rgba(255,255,255,0.12)"/>
+            <stop offset="1" stop-color="rgba(255,255,255,0.04)"/>
+          </linearGradient>
+        </defs>
+        <rect x="4" y="4" width="72" height="92" rx="14" fill="url(#bg)" stroke="rgba(255,255,255,0.18)"/>
+        <text x="40" y="22" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="10" font-weight="900" letter-spacing="1">TAP</text>
+
+        <path d="M26 30 L40 38 L54 30 L64 40 L58 52 L52 48 L52 84 L28 84 L28 48 L22 52 L16 40 Z"
+          fill="${kit.colors.shirt}" opacity="0.95" stroke="rgba(255,255,255,0.40)" stroke-width="1"/>
+        <path d="M34 40 H46" stroke="${kit.colors.trim}" stroke-width="3" opacity="0.85"/>
+
+        <path d="M24 78 C33 86 42 86 56 86 C62 86 66 88 70 92 L70 95 L16 95 L16 82 Z"
+          fill="${boot.color}" opacity="0.92" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+
+        <rect x="10" y="26" width="60" height="4" rx="2" fill="${flag.colors ? flag.colors.b : 'rgba(255,255,255,0.20)'}" opacity="0.9"/>
+      </svg>
+    `;
+  }
+
+  // ---------- safe area ----------
+  function safeArea(){
+    const w = canvas.width, h = canvas.height;
+    const bannerPx = Math.min((72*dpr)+14*dpr, h*0.22);
+    const top = 0;
+    const bottom = Math.max(h - bannerPx, h*0.45);
+    return { w, h, top, bottom, bannerPx };
+  }
+
+  // ---------- game state ----------
+  const game = {
+    running:false,
+    paused:false,
+    gameOver:false,
+    lastT: now(),
+
+    taps:0,
+    runPoints:0,
+    reviveUsed:false,
+
+    combo:1,
+    comboTimer:0,
+    comboWindow:0.85,
+    comboMax:15,
+
+    ball:{ x:0,y:0,vx:0,vy:0,r:50, spin:0, omega:0 },
+
+    posts:{ active:false, leftY:0, rightY:0, vy:0, h:0, w:0, vanish:false, vanishT:0 },
+
+    tempWalls:{ active:false, t:0, dur:2.2 },
+    tempPosts:{ active:false, t:0, dur:2.4 },
+
+    wind:{ x:0, target:0, t:0, next:0 },
+
+    pickups: [],
+    pickupNext: 0,
+
+    lastMilestone: 0,
+  };
+
+  function baseRadius(){
+    const a = safeArea();
+    return Math.max(44*dpr, Math.min(78*dpr, Math.min(a.w, a.bottom) * 0.070));
+  }
+  function applyBallRadius(){
+    game.ball.r = baseRadius() * ballById(equippedBall).sizeMul;
+  }
+
+  function hideAllOverlays(){
+    ui.overlayMenu.classList.add('hidden');
+    ui.overlayShop.classList.add('hidden');
+    ui.overlayPitch.classList.add('hidden');
+    ui.overlayHow.classList.add('hidden');
+    ui.overlayGameOver.classList.add('hidden');
+  }
+  function showOverlay(el){
+    hideAllOverlays();
+    el.classList.remove('hidden');
+  }
+  function overlaysOpen(){
+    return !ui.overlayMenu.classList.contains('hidden') ||
+           !ui.overlayShop.classList.contains('hidden') ||
+           !ui.overlayPitch.classList.contains('hidden') ||
+           !ui.overlayHow.classList.contains('hidden') ||
+           !ui.overlayGameOver.classList.contains('hidden');
+  }
+
+  function updateHud(){
+    ui.taps.textContent = String(game.taps);
+    ui.combo.textContent = `x${game.combo}`;
+    ui.runPts.textContent = String(Math.floor(game.runPoints));
+    ui.wallet.textContent = String(Math.floor(wallet));
+    ui.best.textContent = String(getBest(selectedModeId));
+  }
+
+  function renderTop3Text(){
+    const arr = loadTop3(selectedModeId);
+    const m = getMode(selectedModeId);
+    const a = arr.length ? arr : [0,0,0];
+    ui.top3Text.textContent = `Top 3 — ${m.name}: ${a[0]||'—'} / ${a[1]||'—'} / ${a[2]||'—'}`;
+  }
+
+  function resetWind(){
+    game.wind.x = 0;
+    game.wind.target = 0;
+    game.wind.t = 0;
+    game.wind.next = now() + rand(1200, 2400);
+  }
+  function resetPickups(){
+    game.pickups.length = 0;
+    game.pickupNext = now() + rand(900, 1500);
+  }
+
+  function initPosts(){
+    const a = safeArea();
+    const m = getMode(selectedModeId);
+    game.posts.active = (m.sides === 'posts');
+    game.posts.vanish = (m.vanish === true);
+    game.posts.vanishT = 0;
+    game.posts.h = Math.max(110*dpr, Math.min(220*dpr, (a.bottom-a.top)*0.34));
+    game.posts.w = Math.max(16*dpr, Math.min(26*dpr, a.w*0.035));
+    game.posts.leftY = a.top + (a.bottom-a.top)*0.45;
+    game.posts.rightY = a.top + (a.bottom-a.top)*0.52;
+    game.posts.vy = (m.moving ? 95*dpr : 0);
+  }
+
+  function resetRun(){
+    const a = safeArea();
+    applyBallRadius();
+    const b = game.ball;
+
+    game.taps = 0;
+    game.runPoints = 0;
+    game.reviveUsed = false;
+    game.gameOver = false;
+    game.lastMilestone = 0;
+
+    game.combo = 1;
+    game.comboTimer = 0;
+
+    b.x = a.w * 0.5;
+    b.y = a.top + (a.bottom - a.top) * 0.55;
+    b.vx = rand(-130,130)*dpr;
+    b.vy = rand(-520,-420)*dpr;
+    b.spin = 0;
+    b.omega = rand(-1.8,1.8);
+
+    game.tempWalls.active=false; game.tempWalls.t=0;
+    game.tempPosts.active=false; game.tempPosts.t=0;
+
+    initPosts();
+    resetWind();
+    resetPickups();
+
+    ui.status.textContent = `${getMode(selectedModeId).name} ready`;
+    updateHud();
+  }
+
+  function startGame(){
+    game.running = true;
+    game.paused = false;
+    game.lastT = now();
+    resetRun();
+  }
+
+  function bankWalletForRun(){
+    const mult = getMode(selectedModeId).mult;
+    const banked = Math.floor(game.runPoints);
+    const milestoneBonus = Math.floor((Math.floor(game.taps / 25) * 5) * mult);
+    wallet += (banked + milestoneBonus);
+    localStorage.setItem(STORE.wallet, String(wallet));
+    return { banked, milestoneBonus, total: banked + milestoneBonus };
+  }
+
+  function endRun(reason='Dropped!'){
+    if(game.gameOver) return;
+    game.gameOver = true;
+    game.running = false;
+
+    const earn = bankWalletForRun();
+
+    const prevBest = getBest(selectedModeId);
+    if(game.taps > prevBest) setBest(selectedModeId, game.taps);
+    updateTop3(selectedModeId, game.taps);
+    renderTop3Text();
+
+    ui.gameOverText.textContent =
+      `${reason} • ${getMode(selectedModeId).name} • Taps: ${game.taps} • Banked: ${earn.total} (RP ${earn.banked} + Bonus ${earn.milestoneBonus})`;
+
+    ui.btnRevive.style.display = game.reviveUsed ? 'none' : 'inline-block';
+    showOverlay(ui.overlayGameOver);
+    beep(120,0.12,0.10,'sine');
+    updateHud();
+  }
+
+  // ---------- pitch FX helpers ----------
+  function lineColourForPitch(){
+    const p = PITCH_UP.find(x=>x.id===pitchUp) || PITCH_UP[0];
+    if(p.tier===0) return { stroke:'rgba(255,255,255,0.40)', glow:'rgba(255,255,255,0.16)' };
+    if(p.tier===1) return { stroke:'rgba(34,211,238,0.52)', glow:'rgba(34,211,238,0.20)' };
+    if(p.tier===2) return { stroke:'rgba(251,191,36,0.55)', glow:'rgba(251,191,36,0.22)' };
+    return { stroke:'rgba(0,255,245,0.62)', glow:'rgba(0,255,245,0.26)' };
+  }
+  function drawFloodlights(a, strength=1){
+    const beams = 5;
+    ctx.save();
+    ctx.globalAlpha = 0.18 * strength;
+    for(let i=0;i<beams;i++){
+      const x = (i/(beams-1)) * a.w;
+      const g = ctx.createRadialGradient(x, a.top, 10*dpr, x, a.top, a.h*0.9);
+      g.addColorStop(0, 'rgba(255,255,255,0.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(x, a.top + 18*dpr, a.w*0.12, a.h*0.65, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawPitchLines(a, lineStroke, glow){
+    const w = a.w, top = a.top, bottom = a.bottom;
+    const h = bottom - top;
+
+    const pad = 10*dpr;
+    const x0 = pad, x1 = w - pad;
+    const y0 = top + pad, y1 = bottom - pad;
+
+    ctx.save();
+    ctx.strokeStyle = glow;
+    ctx.lineWidth = Math.max(6*dpr, 7.5*dpr);
+    ctx.beginPath();
+    ctx.roundRect(x0,y0,x1-x0,y1-y0, 10*dpr);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(w*0.5, y0);
+    ctx.lineTo(w*0.5, y1);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(w*0.5, top + h*0.5, Math.min(w,h)*0.16, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = lineStroke;
+    ctx.lineWidth = Math.max(2*dpr, 2.7*dpr);
+    ctx.beginPath();
+    ctx.roundRect(x0,y0,x1-x0,y1-y0, 10*dpr);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(w*0.5, y0);
+    ctx.lineTo(w*0.5, y1);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(w*0.5, top + h*0.5, Math.min(w,h)*0.16, 0, Math.PI*2);
+    ctx.stroke();
+
+    const boxW = (x1-x0)*0.24;
+    const boxH = h*0.26;
+    ctx.beginPath();
+    ctx.rect(x0, top + h*0.5 - boxH*0.5, boxW, boxH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(x1-boxW, top + h*0.5 - boxH*0.5, boxW, boxH);
+    ctx.stroke();
+
+    const sBoxW = boxW*0.55;
+    const sBoxH = boxH*0.52;
+    ctx.beginPath();
+    ctx.rect(x0, top + h*0.5 - sBoxH*0.5, sBoxW, sBoxH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(x1-sBoxW, top + h*0.5 - sBoxH*0.5, sBoxW, sBoxH);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+  function drawPitch(){
+    const a = safeArea();
+    const m = getMode(selectedModeId);
+    const p = PITCH_UP.find(x=>x.id===pitchUp) || PITCH_UP[0];
+    const lc = lineColourForPitch();
+
+    if(m.pitchBase==='neon'){
+      const g = ctx.createLinearGradient(0,a.top,0,a.bottom);
+      g.addColorStop(0,'#031026');
+      g.addColorStop(1,'#010712');
+      ctx.fillStyle=g; ctx.fillRect(0,0,a.w,a.h);
+
+      ctx.save();
+      ctx.globalAlpha = 0.20 + 0.10*p.tier;
+      const hz = ctx.createRadialGradient(a.w*0.5, a.top + (a.bottom-a.top)*0.55, 40*dpr, a.w*0.5, a.top + (a.bottom-a.top)*0.55, a.w*0.8);
+      hz.addColorStop(0,'rgba(0,255,245,0.22)');
+      hz.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = hz;
+      ctx.fillRect(0,0,a.w,a.h);
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalAlpha = 0.16 + 0.06*p.tier;
+      ctx.strokeStyle='rgba(0,255,245,0.65)';
+      ctx.lineWidth=Math.max(1*dpr,1.4*dpr);
+      const grid = Math.max(44*dpr, Math.min(92*dpr, a.w*0.09));
+      for(let x=0;x<a.w;x+=grid){ ctx.beginPath(); ctx.moveTo(x,a.top); ctx.lineTo(x,a.bottom); ctx.stroke(); }
+      for(let y=a.top;y<a.bottom;y+=grid){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(a.w,y); ctx.stroke(); }
+      ctx.restore();
+
+      if(p.tier>=3){
+        const pulse = 0.5 + 0.5*Math.sin(now()*0.004);
+        ctx.save();
+        ctx.globalAlpha = 0.08 + 0.06*pulse;
+        ctx.fillStyle = 'rgba(0,255,245,1)';
+        ctx.beginPath();
+        ctx.arc(a.w*0.5, a.top+(a.bottom-a.top)*0.55, a.w*0.55, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawPitchLines(a, lc.stroke, lc.glow);
+      return;
+    }
+
+    let topCol = '#1aa85a', botCol = '#0a5a2e';
+    if(m.pitchBase==='mud'){ topCol = '#5f7a45'; botCol = '#2f4a23'; }
+    if(m.pitchBase==='stadium'){ topCol = '#20c06a'; botCol = '#08683a'; }
+    if(m.pitchBase==='flood'){ topCol = '#1ecf72'; botCol = '#0b6a3c'; }
+
+    const g = ctx.createLinearGradient(0,a.top,0,a.bottom);
+    g.addColorStop(0, topCol); g.addColorStop(1, botCol);
+    ctx.fillStyle=g; ctx.fillRect(0,0,a.w,a.h);
+
+    let stripeA = 0.05, stripeB = 0.03;
+    if(p.tier>=1){ stripeA=0.09; stripeB=0.05; }
+    if(p.tier>=2){ stripeA=0.11; stripeB=0.06; }
+    if(p.tier>=3){ stripeA=0.13; stripeB=0.08; }
+
+    const stripeW = Math.max(62*dpr, Math.min(130*dpr, a.w * 0.14));
+    for(let x=0;x<a.w;x+=stripeW*2){
+      ctx.fillStyle = `rgba(255,255,255,${stripeA})`; ctx.fillRect(x,a.top,stripeW,a.bottom-a.top);
+      ctx.fillStyle = `rgba(0,0,0,${stripeB})`; ctx.fillRect(x+stripeW,a.top,stripeW,a.bottom-a.top);
+    }
+
+    if(m.pitchBase==='mud'){
+      ctx.save();
+      ctx.globalAlpha = 0.18 + 0.05*p.tier;
+      for(let i=0;i<95;i++){
+        ctx.fillStyle = i%2 ? 'rgba(60,40,20,0.35)' : 'rgba(40,30,18,0.26)';
+        const r = rand(2,6)*dpr;
+        const x = rand(0,a.w);
+        const y = rand(a.top, a.bottom);
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if(m.pitchBase==='flood') drawFloodlights(a, 1.0 + 0.15*p.tier);
+    if(m.pitchBase==='stadium') drawFloodlights(a, 1.15 + 0.18*p.tier);
+
+    if(p.tier>=2){
+      ctx.save();
+      ctx.globalAlpha = 0.20;
+      ctx.fillStyle='rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      ctx.arc(a.w*0.72, a.top+40*dpr, 10*dpr, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawPitchLines(a, lc.stroke, lc.glow);
+  }
+
+  // ---------- ball draw ----------
+  function drawFootball(b){
+    ctx.save();
+    ctx.translate(b.x,b.y);
+    ctx.rotate(b.spin);
+
+    const g = ctx.createRadialGradient(-b.r*0.25, -b.r*0.3, b.r*0.2, 0, 0, b.r*1.05);
+    g.addColorStop(0, 'rgba(255,255,255,0.98)');
+    g.addColorStop(1, 'rgba(220,225,235,0.98)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+
+    const kit = kitById(kitEquip);
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = kit.colors.shirt;
+    ctx.lineWidth = Math.max(2*dpr, 3*dpr);
+    ctx.beginPath(); ctx.arc(0,0,b.r*0.88,0,Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+    ctx.lineWidth = Math.max(1.2*dpr, 1.8*dpr);
+    const pr = b.r*0.34;
+    ctx.fillStyle = 'rgba(20,20,24,0.86)';
+    ctx.beginPath();
+    for(let i=0;i<5;i++){
+      const a = (Math.PI*2)*(i/5) - Math.PI/2;
+      const x = Math.cos(a)*pr;
+      const y = Math.sin(a)*pr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  function drawBasketball(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.spin);
+    const g = ctx.createRadialGradient(-b.r*0.3,-b.r*0.35,b.r*0.2,0,0,b.r*1.1);
+    g.addColorStop(0,'rgba(255,190,90,0.98)');
+    g.addColorStop(1,'rgba(210,120,40,0.98)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(40,20,10,0.55)';
+    ctx.lineWidth=Math.max(2*dpr,2.6*dpr);
+    ctx.beginPath(); ctx.arc(0,0,b.r*0.82,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-b.r,0); ctx.lineTo(b.r,0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-b.r); ctx.lineTo(0,b.r); ctx.stroke();
+    ctx.restore();
+  }
+  function drawGolf(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.spin);
+    const g = ctx.createRadialGradient(-b.r*0.25,-b.r*0.3,b.r*0.15,0,0,b.r*1.05);
+    g.addColorStop(0,'rgba(255,255,255,0.98)');
+    g.addColorStop(1,'rgba(210,220,230,0.98)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.10)';
+    for(let i=0;i<16;i++){
+      const a = (Math.PI*2)*(i/16);
+      const rr = b.r*0.65;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a)*rr, Math.sin(a)*rr, b.r*0.08, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawCannon(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.spin);
+    const g = ctx.createRadialGradient(-b.r*0.3,-b.r*0.35,b.r*0.2,0,0,b.r*1.1);
+    g.addColorStop(0,'rgba(120,130,145,0.98)');
+    g.addColorStop(1,'rgba(45,55,70,0.98)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.14)';
+    ctx.lineWidth=Math.max(1.4*dpr,1.8*dpr);
+    ctx.beginPath(); ctx.arc(0,0,b.r*0.82,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+  function drawRugby(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.spin);
+    const w = b.r*1.55, h = b.r*1.00;
+    const g = ctx.createRadialGradient(-w*0.1,-h*0.2,b.r*0.2,0,0,w);
+    g.addColorStop(0,'rgba(165,110,70,0.98)');
+    g.addColorStop(1,'rgba(90,55,30,0.98)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.ellipse(0,0,w,h,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.25)';
+    ctx.lineWidth=Math.max(2*dpr,2.5*dpr);
+    ctx.beginPath(); ctx.moveTo(-w*0.65,0); ctx.lineTo(w*0.65,0); ctx.stroke();
+    ctx.restore();
+  }
+  function drawSmile(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.spin*0.35);
+    const g = ctx.createRadialGradient(-b.r*0.25,-b.r*0.35,b.r*0.15,0,0,b.r*1.2);
+    g.addColorStop(0,'rgba(255,255,210,0.98)');
+    g.addColorStop(1,'rgba(245,158,11,0.98)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle='rgba(255,255,255,1)';
+    ctx.beginPath(); ctx.arc(-b.r*0.25,-b.r*0.28,b.r*0.22,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle='rgba(20,20,24,0.82)';
+    ctx.beginPath(); ctx.arc(-b.r*0.28,-b.r*0.10,b.r*0.10,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.r*0.28,-b.r*0.10,b.r*0.10,0,Math.PI*2); ctx.fill();
+
+    ctx.strokeStyle='rgba(20,20,24,0.78)';
+    ctx.lineWidth=Math.max(3*dpr,3.8*dpr);
+    ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.arc(0,b.r*0.10,b.r*0.40, 0.15*Math.PI, 0.85*Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawBall(){
+    const b = game.ball;
+    const t = ballById(equippedBall).type;
+    if(t==='football') return drawFootball(b);
+    if(t==='basketball') return drawBasketball(b);
+    if(t==='golf') return drawGolf(b);
+    if(t==='cannon') return drawCannon(b);
+    if(t==='rugby') return drawRugby(b);
+    if(t==='smile') return drawSmile(b);
+    drawFootball(b);
+  }
+
+  // ---------- Out rule (90% out) ----------
+  function outRuleX(a, b){
+    const margin = b.r * 0.10;
+    const leftOut = (b.x + b.r) < (0 + margin);
+    const rightOut = (b.x - b.r) > (a.w - margin);
+    return leftOut || rightOut;
+  }
+
+  function collideWalls(a, b, bounce){
+    if(b.x - b.r < 10*dpr){
+      b.x = 10*dpr + b.r;
+      b.vx = Math.abs(b.vx) * bounce;
+      b.omega += 2.2;
+    }
+    if(b.x + b.r > a.w - 10*dpr){
+      b.x = a.w - 10*dpr - b.r;
+      b.vx = -Math.abs(b.vx) * bounce;
+      b.omega -= 2.2;
+    }
+  }
+
+  function collidePosts(a, b, bounce, leftY, rightY, ph, pw){
+    const lx0 = 0, lx1 = pw;
+    const ly0 = leftY - ph*0.5;
+    const ly1 = leftY + ph*0.5;
+
+    const rx0 = a.w - pw, rx1 = a.w;
+    const ry0 = rightY - ph*0.5;
+    const ry1 = rightY + ph*0.5;
+
+    function hitRect(x0,y0,x1,y1, side){
+      const cx = clamp(b.x, x0, x1);
+      const cy = clamp(b.y, y0, y1);
+      const dx = b.x - cx;
+      const dy = b.y - cy;
+      if(dx*dx + dy*dy <= b.r*b.r){
+        if(side==='L'){
+          b.x = x1 + b.r;
+          b.vx = Math.abs(b.vx) * bounce;
+          b.omega += 2.6;
+        }else{
+          b.x = x0 - b.r;
+          b.vx = -Math.abs(b.vx) * bounce;
+          b.omega -= 2.6;
+        }
+        b.vy += rand(-60,60)*dpr;
+        beep(260,0.03,0.05,'square');
+      }
+    }
+    hitRect(lx0,ly0,lx1,ly1,'L');
+    hitRect(rx0,ry0,rx1,ry1,'R');
+  }
+
+  function updateWind(dt){
+    const t = now();
+    if(t > game.wind.next){
+      game.wind.next = t + rand(1200, 2400);
+      const base = rand(-360, 360) * dpr;
+      game.wind.target = base;
+      game.wind.t = rand(1.0, 1.7);
+
+      if(Math.abs(base) > 170*dpr){
+        const dir = base>0 ? '→' : '←';
+        const strength = Math.round((Math.abs(base) / (360*dpr)) * 100);
+        fieldIndicator('WIND', `${dir} gust ${strength}%`, 1000, null, 'rgba(56,189,248,.85)');
+      }
+    }
+
+    game.wind.x += (game.wind.target - game.wind.x) * (1 - Math.pow(0.001, dt));
+    if(game.wind.t > 0){
+      game.wind.t -= dt;
+      if(game.wind.t <= 0) game.wind.target = 0;
+    }else{
+      game.wind.target *= (1 - 0.5*dt);
+    }
+  }
+
+  // ---------- pickups ----------
+  function spawnPickup(){
+    const a = safeArea();
+    const x = rand(a.w*0.18, a.w*0.82);
+    const y = rand(a.top + (a.bottom-a.top)*0.24, a.top + (a.bottom-a.top)*0.62);
+    let type = 'whistle';
+    const r = Math.random();
+    if(r < 0.55) type = 'whistle';
+    else if(r < 0.88) type = 'yellow';
+    else type = 'red';
+    const pr = Math.max(18*dpr, Math.min(26*dpr, game.ball.r*0.45));
+    game.pickups.push({ type, x, y, r: pr, t: 6.5 });
+  }
+  function updatePickups(dt){
+    const t = now();
+    if(t > game.pickupNext){
+      game.pickupNext = t + rand(1400, 2400);
+      if(game.pickups.length < 2 && Math.random() < 0.92) spawnPickup();
+    }
+    const b = game.ball;
+    for(let i=game.pickups.length-1;i>=0;i--){
+      const p = game.pickups[i];
+      p.t -= dt;
+      if(p.t <= 0){ game.pickups.splice(i,1); continue; }
+      const dx = b.x - p.x;
+      const dy = b.y - p.y;
+      const rr = (b.r + p.r) * 0.92;
+      if(dx*dx + dy*dy <= rr*rr){
+        applyPickup(p.type);
+        game.pickups.splice(i,1);
+      }
+    }
+  }
+  function applyPickup(type){
+    const mult = getMode(selectedModeId).mult;
+    const bonusBase = 10;
+
+    if(type==='whistle'){
+      game.tempWalls.active = true;
+      game.tempWalls.t = game.tempWalls.dur;
+      fieldIndicator('WHISTLE', 'SAFE WALLS ON', 900, 1, 'rgba(34,197,94,.85)');
+      const add = (bonusBase * mult) * game.combo;
+      game.runPoints += add;
+      toast(`WHISTLE +${Math.floor(add)} RP`);
+      beep(880,0.08,0.08,'triangle');
+      crowdBurst('pickup');
+      return;
+    }
+    if(type==='yellow'){
+      game.tempPosts.active = true;
+      game.tempPosts.t = game.tempPosts.dur;
+      fieldIndicator('YELLOW', 'POSTS SPAWNED', 900, 1, 'rgba(245,158,11,.90)');
+      const add = (bonusBase * 1.1 * mult) * game.combo;
+      game.runPoints += add;
+      toast(`YELLOW +${Math.floor(add)} RP`);
+      beep(220,0.10,0.08,'square');
+      crowdBurst('pickup');
+      return;
+    }
+    fieldIndicator('RED', 'WIND BURST!', 1100, null, 'rgba(225,29,72,.90)');
+    game.wind.target += (Math.random()<0.5 ? -1 : 1) * rand(520, 760) * dpr;
+    game.wind.t = Math.max(game.wind.t, 1.2);
+    const add = (bonusBase * 1.35 * mult) * game.combo;
+    game.runPoints += add;
+    toast(`RED +${Math.floor(add)} RP`);
+    beep(180,0.12,0.10,'sawtooth');
+    crowdBurst('big');
+  }
+  function drawPickups(){
+    for(const p of game.pickups){
+      ctx.save();
+      const pulse = 0.65 + 0.35*Math.sin(now()*0.01 + p.x*0.01);
+      ctx.globalAlpha = 0.90;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r*(1.25 + 0.15*pulse),0,Math.PI*2);
+      ctx.fillStyle = (p.type==='whistle') ? 'rgba(34,197,94,0.18)'
+                   : (p.type==='yellow')  ? 'rgba(245,158,11,0.18)'
+                   : 'rgba(225,29,72,0.18)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 2*dpr;
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 2*dpr;
+
+      if(p.type==='whistle'){
+        ctx.beginPath();
+        ctx.roundRect(p.x-p.r*0.45, p.y-p.r*0.20, p.r*0.90, p.r*0.40, 6*dpr);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(p.x+p.r*0.52, p.y, p.r*0.20, 0, Math.PI*2);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.roundRect(p.x-p.r*0.30, p.y-p.r*0.45, p.r*0.60, p.r*0.90, 5*dpr);
+        ctx.fill();
+        if(p.type==='red'){
+          ctx.globalAlpha = 0.25;
+          ctx.strokeStyle = 'rgba(225,29,72,1)';
+          ctx.beginPath();
+          ctx.arc(p.x,p.y,p.r*1.1,0,Math.PI*2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawSidesAndPowerUI(a){
+    const m = getMode(selectedModeId);
+
+    if(game.tempWalls.active){
+      const frac = clamp(game.tempWalls.t / game.tempWalls.dur, 0, 1);
+      fieldIndicator('WHISTLE', 'SAFE WALLS ACTIVE', 200, frac, 'rgba(34,197,94,.85)');
+    } else if(game.tempPosts.active){
+      const frac = clamp(game.tempPosts.t / game.tempPosts.dur, 0, 1);
+      fieldIndicator('YELLOW', 'POSTS ACTIVE', 200, frac, 'rgba(245,158,11,.90)');
+    }
+
+    const wallsOn = (m.sides==='walls') || game.tempWalls.active;
+    const postsOn = (m.sides==='posts') || game.tempPosts.active;
+
+    if(wallsOn){
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillRect(0, a.top, 10*dpr, a.bottom-a.top);
+      ctx.fillRect(a.w-10*dpr, a.top, 10*dpr, a.bottom-a.top);
+      ctx.restore();
+      return;
+    }
+
+    if(postsOn){
+      const pw = game.posts.w;
+      const ph = game.posts.h;
+      let leftY = game.posts.leftY;
+      let rightY = game.posts.rightY;
+
+      if(game.tempPosts.active && m.sides!=='posts'){
+        leftY = a.top + (a.bottom-a.top)*0.48;
+        rightY = a.top + (a.bottom-a.top)*0.55;
+      }
+
+      if(m.sides==='posts' && m.vanish && game.posts.vanishT > 0 && !game.tempPosts.active){
+        return;
+      }
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.24)';
+      ctx.fillRect(0, leftY - ph*0.5, pw, ph);
+      ctx.fillRect(a.w - pw, rightY - ph*0.5, pw, ph);
+      ctx.restore();
+    }
+  }
+
+  function update(dt){
+    if(needsSoftReset){
+      needsSoftReset = false;
+      applyBallRadius();
+      const a = safeArea();
+      game.ball.x = clamp(game.ball.x, game.ball.r + 12*dpr, a.w - game.ball.r - 12*dpr);
+      game.ball.y = clamp(game.ball.y, a.top + game.ball.r + 12*dpr, a.bottom - game.ball.r - 12*dpr);
+    }
+
+    const a = safeArea();
+    const m = getMode(selectedModeId);
+    const b = game.ball;
+    const ballCfg = ballById(equippedBall);
+    const phys = ballCfg.phys;
+
+    updateWind(dt);
+    updatePickups(dt);
+
+    if(game.tempWalls.active){
+      game.tempWalls.t -= dt;
+      if(game.tempWalls.t <= 0){
+        game.tempWalls.active = false;
+        fieldIndicator('WHISTLE', 'SAFE WALLS OFF', 700, null, 'rgba(34,197,94,.85)');
+      }
+    }
+    if(game.tempPosts.active){
+      game.tempPosts.t -= dt;
+      if(game.tempPosts.t <= 0){
+        game.tempPosts.active = false;
+        fieldIndicator('YELLOW', 'POSTS OFF', 700, null, 'rgba(245,158,11,.90)');
+      }
+    }
+
+    if(game.comboTimer > 0){
+      game.comboTimer -= dt;
+      if(game.comboTimer <= 0) game.combo = 1;
+    }
+
+    let gravityScale = 0.88;
+    if(ballCfg.type==='cannon') gravityScale = 1.02;
+    if(ballCfg.type==='golf') gravityScale = 0.92;
+    const gravity = (900 * dpr) * phys.mass * gravityScale;
+
+    b.vy += gravity * dt;
+
+    b.vx *= (1 - phys.airDrag * dt * 60);
+    b.vy *= (1 - (phys.airDrag*0.55) * dt * 60);
+
+    const windInfluence = (ballCfg.type==='cannon') ? 0.75 : 0.55;
+    b.vx += (game.wind.x * windInfluence) * dt;
+
+    if(ballCfg.type==='rugby'){
+      const wob = Math.sin(now()*0.006) * 55*dpr;
+      b.vx += wob * dt;
+      b.omega += Math.sin(now()*0.007) * 0.55 * dt;
+    }
+    if(ballCfg.type==='smile'){
+      const wob = Math.sin(now()*0.0055) * 35*dpr;
+      b.vx += wob * dt;
+      b.omega += Math.cos(now()*0.0062) * 0.35 * dt;
+    }
+
+    if(ballCfg.type==='cannon'){
+      b.vx += rand(-16,16) * dpr * dt * 60;
+    }
+
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+
+    b.omega += (b.vx * 0.00008);
+    b.omega *= (1 - 0.9*dt);
+    b.spin += b.omega * dt;
+
+    const skyLimit = a.top - b.r * 6.2;
+    if(b.y < skyLimit){
+      b.y = skyLimit;
+      b.vy *= 0.32;
+    }
+
+    if(m.sides==='posts' && m.moving){
+      const bandTop = a.top + (a.bottom-a.top)*0.22;
+      const bandBot = a.top + (a.bottom-a.top)*0.78;
+      game.posts.leftY += game.posts.vy * dt;
+      game.posts.rightY -= game.posts.vy * dt * 0.86;
+      if(game.posts.leftY - game.posts.h*0.5 < bandTop || game.posts.leftY + game.posts.h*0.5 > bandBot){
+        game.posts.vy *= -1;
+      }
+      game.posts.rightY = clamp(game.posts.rightY, bandTop + game.posts.h*0.5, bandBot - game.posts.h*0.5);
+      game.posts.leftY  = clamp(game.posts.leftY,  bandTop + game.posts.h*0.5, bandBot - game.posts.h*0.5);
+    }
+
+    if(m.sides==='posts' && m.vanish){
+      if(game.posts.vanishT <= 0 && Math.random() < 0.0022){
+        game.posts.vanishT = rand(0.8, 1.4);
+        fieldIndicator('GHOST', 'POSTS OFF', 900, null, 'rgba(167,139,250,.85)');
+        beep(320,0.06,0.06,'sine');
+      }
+      if(game.posts.vanishT > 0){
+        game.posts.vanishT -= dt;
+        if(game.posts.vanishT <= 0){
+          fieldIndicator('GHOST', 'POSTS ON', 900, null, 'rgba(167,139,250,.85)');
+          beep(520,0.05,0.06,'triangle');
+        }
+      }
+    }
+
+    if(b.y + b.r >= a.bottom){
+      b.y = a.bottom - b.r;
+      endRun('Dropped!');
+      return;
+    }
+
+    const bounce = phys.bounce;
+
+    const wallsOn = (m.sides==='walls') || game.tempWalls.active;
+    const postsOn = (m.sides==='posts') || game.tempPosts.active;
+
+    if(!wallsOn && !postsOn && m.sides==='none'){
+      if(outRuleX(a,b)){ endRun('Out!'); return; }
+    } else {
+      if(wallsOn){
+        collideWalls(a,b,bounce);
+      } else if(postsOn){
+        const pw = game.posts.w;
+        const ph = game.posts.h;
+        let leftY = game.posts.leftY;
+        let rightY = game.posts.rightY;
+        const vanished = (m.sides==='posts' && m.vanish && game.posts.vanishT > 0 && !game.tempPosts.active);
+
+        if(game.tempPosts.active && m.sides!=='posts'){
+          leftY = a.top + (a.bottom-a.top)*0.48;
+          rightY = a.top + (a.bottom-a.top)*0.55;
+        }
+
+        if(!vanished) collidePosts(a,b,bounce,leftY,rightY,ph,pw);
+        if(outRuleX(a,b)){ endRun('Out!'); return; }
+      }
+    }
+
+    b.x = clamp(b.x, -b.r*2, a.w + b.r*2);
+  }
+
+  function draw(){
+    const a = safeArea();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawPitch();
+    drawSidesAndPowerUI(a);
+    drawPickups();
+    drawBall();
+
+    const wx = game.wind.x;
+    if(Math.abs(wx) > 110*dpr){
+      ctx.save();
+      ctx.globalAlpha = 0.20;
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = Math.max(2*dpr,2.6*dpr);
+      const y = a.top + (a.bottom-a.top)*0.20;
+      const x0 = a.w*0.5 - 70*dpr;
+      const x1 = a.w*0.5 + 70*dpr;
+      ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+      const dir = wx>0 ? 1 : -1;
+      ctx.beginPath();
+      ctx.moveTo(a.w*0.5 + dir*70*dpr, y);
+      ctx.lineTo(a.w*0.5 + dir*50*dpr, y-10*dpr);
+      ctx.lineTo(a.w*0.5 + dir*50*dpr, y+10*dpr);
+      ctx.closePath();
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ---------- input ----------
+  function getCanvasPos(e){
+    const rect = canvas.getBoundingClientRect();
+    const clientX = ('clientX' in e) ? e.clientX : e.touches[0].clientX;
+    const clientY = ('clientY' in e) ? e.clientY : e.touches[0].clientY;
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { x, y };
+  }
+
+  let lastTapAt = 0;
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    if(overlaysOpen()) return;
+    e.preventDefault();
+    if(!game.running || game.paused || game.gameOver) return;
+
+    const ballCfg = ballById(equippedBall);
+    const TAP_COOLDOWN_MS = ballCfg.tapCD;
+
+    const t = performance.now();
+    if(t - lastTapAt < TAP_COOLDOWN_MS) return;
+    lastTapAt = t;
+
+    const a = safeArea();
+    const p = getCanvasPos(e);
+    const b = game.ball;
+    const phys = ballCfg.phys;
+
+    const topNoScore = a.top + (a.bottom-a.top)*0.14;
+    const tapCounts = (b.y > topNoScore);
+
+    const dx = p.x - b.x;
+    const dy = p.y - b.y;
+    const dist = Math.hypot(dx, dy);
+    if(dist > b.r * 1.45) return;
+
+    const under = clamp((b.y - p.y) / (b.r * 1.2), -1.2, 1.2);
+    const side  = clamp(dx / (b.r * 1.2), -1.2, 1.2);
+
+    const lift = (1220 * dpr) * (1/phys.mass) * phys.liftMul * (0.84 + 0.90*(0.5 + under*0.5));
+    const push = (-side * 520 * dpr) * (1/phys.mass);
+
+    b.vy -= lift;
+    b.vx += push + rand(-55,55)*dpr;
+    b.omega += (-side * 7.2) + rand(-0.8,0.8);
+
+    if(tapCounts){
+      game.taps += 1;
+      if(game.comboTimer > 0) game.combo = clamp(game.combo + 1, 1, game.comboMax);
+      else game.combo = 1;
+      game.comboTimer = game.comboWindow;
+
+      const mult = getMode(selectedModeId).mult;
+      const gain = (1.15 * mult) * game.combo;
+      game.runPoints += gain;
+      toast(`+${Math.floor(gain)} RP • x${game.combo}`);
+
+      const ms = Math.floor(game.taps / 25);
+      if(ms > game.lastMilestone){
+        game.lastMilestone = ms;
+        fieldIndicator('CROWD', `MILESTONE ${ms*25}!`, 950, null, 'rgba(34,197,94,.85)');
+        crowdBurst('milestone');
+      }
+    } else {
+      game.comboTimer = 0;
+      game.combo = 1;
+      toast('NO SCORE (too high)');
+    }
+
+    updateHud();
+    beep(520 + Math.min(220, Math.abs(side)*160), 0.04, 0.06, 'sine');
+  }, { passive:false });
+
+  // ---------- shop UI helpers ----------
+  let shopTab = 'balls';
+  function setActiveTab(){
+    const set = (btn, on) => btn.style.filter = on ? 'brightness(1.08)' : 'brightness(0.95)';
+    set(ui.tabBalls, shopTab==='balls');
+    set(ui.tabKit, shopTab==='kit');
+    set(ui.tabPitchShop, shopTab==='pitch');
+    set(ui.tabBoots, shopTab==='boots');
+    set(ui.tabFlag, shopTab==='flag');
+  }
+  function badgeHtml(text, color){
+    return `<span class="badge" style="color:${color}; border-color:${color.replace('0.98','0.26').replace('0.96','0.26')}">${text}</span>`;
+  }
+  function rowItem(iconSVG, name, meta, badgeText, badgeColor){
+    const el = document.createElement('div');
+    el.className = 'rowItem';
+    el.innerHTML = `
+      <div class="rowLeft">
+        <div class="rowIcon">${iconSVG}</div>
+        <div class="rowText">
+          <div class="nm">${name}</div>
+          <div class="mt">${meta}</div>
+        </div>
+      </div>
+      ${badgeHtml(badgeText, badgeColor)}
+    `;
+    return el;
+  }
+
+  function renderShop(){
+    setActiveTab();
+    ui.shopSub.textContent = `Wallet: ${Math.floor(wallet)} • Best taps: ${bestOverall()} • Combo = more RunPts`;
+    ui.shopGrid.innerHTML = '';
+
+    if(shopTab==='balls'){
+      ui.shopInfo.textContent = 'Unlock by Eligibility (Best taps), then buy with Wallet.';
+      for(const b of BALLS){
+        const ownedBall = !!owned.ball[b.id] || b.cost===0;
+        const eq = (equippedBall===b.id);
+        const have = bestOverall();
+        const canUnlock = have >= (b.elig||0);
+        const meta = (b.elig?`Eligibility: Best ${b.elig}+ (you: ${have}) • `:'') + (ownedBall ? 'Owned' : `Cost: ${b.cost}`);
+        const badge = eq ? 'Equipped' : (ownedBall ? (canUnlock ? 'Equip' : 'Locked') : `Buy ${b.cost}`);
+        const badgeColor = eq ? 'rgba(120,255,190,.98)' : (ownedBall && canUnlock ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)');
+
+        const icon = `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="rgba(255,255,255,.7)" stroke-width="1.6"/><path d="M12 5.5v13" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/></svg>`;
+        const row = rowItem(icon, b.name, meta, badge, badgeColor);
+
+        row.addEventListener('click', ()=>{
+          if(eq) return;
+          if(!canUnlock){ ui.status.textContent = `Need Best ${b.elig}+ taps to unlock ${b.name}.`; beep(220,0.05,0.06); return; }
+          if(ownedBall){
+            equippedBall = b.id; localStorage.setItem(STORE.equipBall, equippedBall);
+            applyBallRadius();
+            ui.status.textContent = `Equipped: ${b.name}`;
+            beep(520,0.04,0.06);
+            renderShop();
+            return;
+          }
+          if(wallet < b.cost){ ui.status.textContent = `Need ${b.cost} Wallet points.`; beep(200,0.05,0.06); return; }
+          wallet -= b.cost; localStorage.setItem(STORE.wallet, String(wallet));
+          owned.ball[b.id] = true; saveOwned();
+          equippedBall = b.id; localStorage.setItem(STORE.equipBall, equippedBall);
+          applyBallRadius();
+          ui.status.textContent = `Bought + Equipped: ${b.name}`;
+          beep(860,0.06,0.09,'triangle');
+          updateHud();
+          renderShop();
+        });
+        ui.shopGrid.appendChild(row);
+      }
+      return;
+    }
+
+    if(shopTab==='kit'){
+      ui.shopInfo.textContent = 'Kits change your Player Card + adds a subtle ball accent ring.';
+      for(const k of KITS){
+        const own = !!owned.kit[k.id] || k.cost===0;
+        const eq = (kitEquip===k.id);
+        const meta = own ? k.desc : `Cost: ${k.cost} • ${k.desc}`;
+        const badge = eq ? 'Equipped' : (own ? 'Equip' : `Buy ${k.cost}`);
+        const badgeColor = eq ? 'rgba(120,255,190,.98)' : (own ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)');
+
+        const icon = svgShirt(k.colors.shirt, k.colors.trim);
+        const row = rowItem(icon, k.name, meta, badge, badgeColor);
+
+        row.addEventListener('click', ()=>{
+          if(eq) return;
+          if(own){
+            kitEquip = k.id; localStorage.setItem(STORE.equipKit, kitEquip);
+            ui.status.textContent = `Kit equipped: ${k.name}`;
+            beep(520,0.04,0.06);
+            renderPlayerCard();
+            renderShop();
+            return;
+          }
+          if(wallet < k.cost){ ui.status.textContent = `Need ${k.cost} Wallet points.`; beep(200,0.05,0.06); return; }
+          wallet -= k.cost; localStorage.setItem(STORE.wallet, String(wallet));
+          owned.kit[k.id]=true; saveOwned();
+          kitEquip = k.id; localStorage.setItem(STORE.equipKit, kitEquip);
+          ui.status.textContent = `Bought + Equipped: ${k.name}`;
+          beep(860,0.06,0.09,'triangle');
+          updateHud();
+          renderPlayerCard();
+          renderShop();
+        });
+
+        ui.shopGrid.appendChild(row);
+      }
+      return;
+    }
+
+    if(shopTab==='pitch'){
+      ui.shopInfo.textContent = 'Pitch FX upgrades: line colour + circles/boxes + lighting/stripes.';
+      for(const p of PITCH_UP){
+        const own = !!owned.pitch[p.id] || p.cost===0;
+        const eq = (pitchUp===p.id);
+        const meta = own ? p.desc : `Cost: ${p.cost} • ${p.desc}`;
+        const badge = eq ? 'Equipped' : (own ? 'Equip' : `Buy ${p.cost}`);
+        const badgeColor = eq ? 'rgba(120,255,190,.98)' : (own ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)');
+
+        const icon = `<svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4z" stroke="rgba(255,255,255,.7)" stroke-width="1.6"/><path d="M12 7v10" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/></svg>`;
+        const row = rowItem(icon, p.name, meta, badge, badgeColor);
+
+        row.addEventListener('click', ()=>{
+          if(eq) return;
+          if(own){
+            pitchUp = p.id; localStorage.setItem(STORE.equipPitch, pitchUp);
+            ui.status.textContent = `Pitch equipped: ${p.name}`;
+            beep(520,0.04,0.06);
+            renderShop();
+            return;
+          }
+          if(wallet < p.cost){ ui.status.textContent = `Need ${p.cost} Wallet points.`; beep(200,0.05,0.06); return; }
+          wallet -= p.cost; localStorage.setItem(STORE.wallet, String(wallet));
+          owned.pitch[p.id]=true; saveOwned();
+          pitchUp = p.id; localStorage.setItem(STORE.equipPitch, pitchUp);
+          ui.status.textContent = `Bought + Equipped: ${p.name}`;
+          beep(860,0.06,0.09,'triangle');
+          updateHud();
+          renderShop();
+        });
+        ui.shopGrid.appendChild(row);
+      }
+      return;
+    }
+
+    if(shopTab==='boots'){
+      ui.shopInfo.textContent = 'Boot colours change the boot on your Player Card (250 each).';
+      for(const b of BOOTS){
+        const own = !!owned.boot[b.id] || b.cost===0;
+        const eq = (bootEquip===b.id);
+        const meta = own ? 'Owned' : `Cost: ${b.cost}`;
+        const badge = eq ? 'Equipped' : (own ? 'Equip' : `Buy ${b.cost}`);
+        const badgeColor = eq ? 'rgba(120,255,190,.98)' : (own ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)');
+
+        const icon = svgBoot(b.color);
+        const row = rowItem(icon, b.name, meta, badge, badgeColor);
+
+        row.addEventListener('click', ()=>{
+          if(eq) return;
+          if(own){
+            bootEquip = b.id; localStorage.setItem(STORE.equipBoot, bootEquip);
+            ui.status.textContent = `Boots equipped: ${b.name}`;
+            beep(520,0.04,0.06);
+            renderPlayerCard();
+            renderShop();
+            return;
+          }
+          if(wallet < b.cost){ ui.status.textContent = `Need ${b.cost} Wallet points.`; beep(200,0.05,0.06); return; }
+          wallet -= b.cost; localStorage.setItem(STORE.wallet, String(wallet));
+          owned.boot[b.id]=true; saveOwned();
+          bootEquip = b.id; localStorage.setItem(STORE.equipBoot, bootEquip);
+          ui.status.textContent = `Bought + Equipped: ${b.name}`;
+          beep(860,0.06,0.09,'triangle');
+          updateHud();
+          renderPlayerCard();
+          renderShop();
+        });
+        ui.shopGrid.appendChild(row);
+      }
+      return;
+    }
+
+    ui.shopInfo.textContent = 'Flags are simple colour themes for your player card.';
+    for(const f of FLAGS){
+      const own = !!owned.flag[f.id] || f.cost===0;
+      const eq = (flagWrap===f.id);
+      const meta = own ? 'Owned' : `Cost: ${f.cost}`;
+      const badge = eq ? 'Equipped' : (own ? 'Equip' : `Buy ${f.cost}`);
+      const badgeColor = eq ? 'rgba(120,255,190,.98)' : (own ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)');
+
+      const icon = svgFlag(f.colors);
+      const row = rowItem(icon, f.name, meta, badge, badgeColor);
+
+      row.addEventListener('click', ()=>{
+        if(eq) return;
+        if(own){
+          flagWrap = f.id; localStorage.setItem(STORE.equipFlag, flagWrap);
+          ui.status.textContent = `Flag equipped: ${f.name}`;
+          beep(520,0.04,0.06);
+          renderPlayerCard();
+          renderShop();
+          return;
+        }
+        if(wallet < f.cost){ ui.status.textContent = `Need ${f.cost} Wallet points.`; beep(200,0.05,0.06); return; }
+        wallet -= f.cost; localStorage.setItem(STORE.wallet, String(wallet));
+        owned.flag[f.id]=true; saveOwned();
+        flagWrap = f.id; localStorage.setItem(STORE.equipFlag, flagWrap);
+        ui.status.textContent = `Bought + Equipped: ${f.name}`;
+        beep(860,0.06,0.09,'triangle');
+        updateHud();
+        renderPlayerCard();
+        renderShop();
+      });
+      ui.shopGrid.appendChild(row);
+    }
+  }
+
+  function renderPitchSelect(){
+    ui.pitchGrid.innerHTML = '';
+    for(const p of PITCH_UP){
+      const own = !!owned.pitch[p.id] || p.cost===0;
+      const eq = (pitchUp===p.id);
+
+      const el = document.createElement('div');
+      el.className = 'rowItem';
+      el.innerHTML = `
+        <div class="rowLeft">
+          <div class="rowIcon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4z" stroke="rgba(255,255,255,.7)" stroke-width="1.6"/></svg>
+          </div>
+          <div class="rowText">
+            <div class="nm">${p.name}</div>
+            <div class="mt">${own ? p.desc : `Buy in Shop (${p.cost})`}</div>
+          </div>
+        </div>
+        ${badgeHtml(eq?'Selected':(own?'Select':'Locked'), eq ? 'rgba(120,255,190,.98)' : (own ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)'))}
+      `;
+
+      el.addEventListener('click', ()=>{
+        if(!own){ ui.status.textContent='Buy this pitch in Shop first.'; beep(200,0.05,0.06); return; }
+        pitchUp = p.id;
+        localStorage.setItem(STORE.equipPitch, pitchUp);
+        ui.status.textContent = `Pitch set: ${p.name}`;
+        beep(520,0.04,0.05,'triangle');
+        renderPitchSelect();
+      });
+      ui.pitchGrid.appendChild(el);
+    }
+  }
+
+  function renderHow(){
+    document.getElementById('howText').innerHTML = `
+      <b>Goal:</b> keep the ball up. Score is <b>Taps</b>.<br><br>
+      <b>Combo:</b> score again within ~${Math.round(game.comboWindow*1000)}ms to build combo (max x${game.comboMax}). Higher combo = huge RunPts.<br><br>
+      <b>Pickups:</b><br>
+      • <b>Whistle</b> = safe walls temporarily + bonus RunPts<br>
+      • <b>Yellow</b> = posts temporarily + bonus RunPts<br>
+      • <b>Red</b> = strong wind burst + bonus RunPts<br><br>
+      <b>Fair Out:</b> ball can go ~90% out before out.<br>
+      <b>Anti-cheese:</b> taps too close to the top won’t score.<br>
+      <b>Balance:</b> heavy balls have slightly higher tap cooldown.
+    `;
+  }
+
+  function renderModes(){
+    ui.modesList.innerHTML = '';
+    ui.modeHint.textContent = '';
+    for(const m of MODES){
+      const unlocked = modeUnlocked(m);
+      const selected = (m.id === selectedModeId);
+
+      const el = document.createElement('div');
+      el.className = 'rowItem';
+      el.innerHTML = `
+        <div class="rowLeft">
+          <div class="rowIcon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 19V7l6-3 6 3v12H6z" stroke="rgba(255,255,255,.7)" stroke-width="1.6"/></svg>
+          </div>
+          <div class="rowText">
+            <div class="nm">${m.name}</div>
+            <div class="mt">${m.hint}</div>
+          </div>
+        </div>
+        ${badgeHtml(selected?'Selected':(unlocked?`x${m.mult}`:'Locked'), selected ? 'rgba(120,255,190,.98)' : (unlocked ? 'rgba(255,255,255,.86)' : 'rgba(255,225,120,.96)'))}
+      `;
+
+      el.addEventListener('click', ()=>{
+  if(!unlocked){
+    const req = m.unlock;
+    const have = getBest(req.requires);
+    ui.modeHint.textContent = `Locked: Get ${req.best} best taps in ${getMode(req.requires).name}. (You have ${have})`;
+    beep(200, 0.05, 0.05);
+    return;
+  }
+
+  selectedModeId = m.id;
+  localStorage.setItem(STORE.mode, selectedModeId);
+
+  ui.status.textContent = `${m.name} selected`;
+  ui.modeHint.textContent = ''; // optional: clear the locked hint text
+
+  renderModes();        // ✅ this refreshes the Selected badge immediately
+  renderTop3Text();
+  updateHud();
+
+  beep(520,0.04,0.05,'triangle');
+});
+
+
+      ui.modesList.appendChild(el);
+    }
+  }
+
+  // ---------- draw loop ----------
+  function loop(){
+    requestAnimationFrame(loop);
+    draw();
+    if(!game.running || game.paused) return;
+
+    const t = now();
+    let dt = (t - game.lastT)/1000;
+    game.lastT = t;
+    dt = clamp(dt, 0, 0.033);
+    update(dt);
+  }
+
+  // ---------- controls ----------
+  function togglePause(){
+    if(!game.running) return;
+    game.paused = !game.paused;
+    ui.btnPause.textContent = game.paused ? 'Resume' : 'Pause';
+    if(!game.paused) game.lastT = now();
+  }
+  function restart(){
+    hideAllOverlays();
+    game.running = true;
+    game.paused = false;
+    game.gameOver = false;
+    game.lastT = now();
+    resetRun();
+  }
+  function showMenu(){
+    game.running = false;
+    game.paused = false;
+    game.gameOver = false;
+    ui.btnPause.textContent = 'Pause';
+    showOverlay(ui.overlayMenu);
+    ui.status.textContent = 'Pick a mode. Tap PLAY.';
+    renderModes();
+    renderTop3Text();
+    renderPlayerCard();
+    updateHud();
+  }
+
+  ui.btnPlay.addEventListener('click', ()=>{ hideAllOverlays(); startGame(); });
+  ui.btnShop.addEventListener('click', ()=>{ shopTab='balls'; showOverlay(ui.overlayShop); renderShop(); });
+  ui.btnBalls.addEventListener('click', ()=>{ shopTab='balls'; showOverlay(ui.overlayShop); renderShop(); });
+  ui.btnHow.addEventListener('click', ()=>{ showOverlay(ui.overlayHow); renderHow(); });
+
+  ui.btnCloseShop.addEventListener('click', showMenu);
+ui.btnClosePitch.addEventListener('click', showMenu);
+ui.btnCloseHow.addEventListener('click', showMenu);
+
+
+  ui.btnPause.addEventListener('click', togglePause);
+  ui.btnRestart.addEventListener('click', restart);
+  ui.btnMenuDock.addEventListener('click', showMenu);
+
+  ui.btnMenu2.addEventListener('click', showMenu);
+  ui.btnPlayAgain.addEventListener('click', restart);
+
+  ui.btnRevive.addEventListener('click', ()=>{
+    if(game.reviveUsed) return;
+    game.reviveUsed = true;
+    hideAllOverlays();
+    game.running = true;
+    game.gameOver = false;
+
+    const a = safeArea();
+    applyBallRadius();
+    game.ball.y = a.top + (a.bottom-a.top)*0.62;
+    game.ball.vy = -860*dpr;
+    game.ball.vx = rand(-90,90)*dpr;
+    game.combo = 1;
+    game.comboTimer = 0.35;
+    fieldIndicator('REVIVE', 'SECOND CHANCE!', 900, null, 'rgba(56,189,248,.85)');
+    beep(760,0.06,0.08,'triangle');
+    crowdBurst('big');
+    updateHud();
+  });
+
+  // Tabs
+  ui.tabBalls.addEventListener('click', ()=>{ shopTab='balls'; renderShop(); });
+  ui.tabKit.addEventListener('click', ()=>{ shopTab='kit'; renderShop(); });
+  ui.tabPitchShop.addEventListener('click', ()=>{ shopTab='pitch'; renderShop(); });
+  ui.tabBoots.addEventListener('click', ()=>{ shopTab='boots'; renderShop(); });
+  ui.tabFlag.addEventListener('click', ()=>{ shopTab='flag'; renderShop(); });
+
+  // Sound
+  ui.btnSound.addEventListener('click', ()=> setSound(!soundOn));
+  ui.btnMenuSound.addEventListener('click', ()=> setSound(!soundOn));
+
+  // ---------- init ----------
+  function init(){
+    owned.ball.football = true;
+    owned.pitch.default = true;
+    owned.flag.none = true;
+    owned.kit.classic = true;
+    owned.boot.black = true;
+    saveOwned();
+
+    applyBallRadius();
+    setSound(false);
+    renderModes();
+    renderTop3Text();
+    renderPlayerCard();
+    updateHud();
+    showOverlay(ui.overlayMenu);
+    loop();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
